@@ -9,7 +9,7 @@ control flow lightweight so it can run entirely offline.
 from __future__ import annotations
 
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
@@ -39,7 +39,7 @@ class QuantumSecretHitlerGame:
     def __init__(self) -> None:
         self.num_players = constants.PLAYER_COUNT
         self.players = self._assign_roles()
-        self.hitler = self._assign_hitler()
+        self.hitler, self.hitler_dist = self._assign_hitler()
         self.president = np.random.randint(self.num_players)
 
         print("Initial roles:")
@@ -87,21 +87,34 @@ class QuantumSecretHitlerGame:
             players.append(Player(i, role))
         return players
 
-    def _assign_hitler(self) -> int:
-        """Randomly pick the initial Hitler among the fascists."""
+    def _assign_hitler(self) -> Tuple[int, dict[int, float]]:
+        """Randomly pick the initial Hitler and return the starting distribution."""
         fascists = [p.index for p in self.players if p.role == "fascist"]
-        state = uniform_hitler_state(len(fascists))
+        _ = uniform_hitler_state(len(fascists))  # state only for parity with PDF
         hit_prob = 1 / len(fascists)
-        dist = {f: round(hit_prob, 2) for f in fascists}
+        dist = {f: hit_prob for f in fascists}
         print(f"Initial Hitler distribution: {dist}")
         outcome = np.random.choice(fascists, p=[hit_prob] * len(fascists))
-        return outcome
+        return outcome, dist
 
     # ------------------------------------------------------------------
     # Basic helpers
     # ------------------------------------------------------------------
     def _alive_players(self) -> List[Player]:
         return [p for p in self.players if p.alive]
+
+    def _bias_hitler_distribution(self, player: int) -> None:
+        """Increase the probability that ``player`` is Hitler."""
+        if player not in self.hitler_dist:
+            return
+        self.hitler_dist[player] *= constants.HITLER_BIAS_FACTOR
+        total = sum(self.hitler_dist.values())
+        for k in self.hitler_dist:
+            self.hitler_dist[k] /= total
+
+    def _print_hitler_distribution(self) -> None:
+        dist = {k: round(v, 2) for k, v in self.hitler_dist.items()}
+        print(f"Current Hitler distribution: {dist}")
 
     def _visualize(self) -> None:
         """Show a bar chart of the policy counts."""
@@ -202,6 +215,10 @@ class QuantumSecretHitlerGame:
             pres_bias = 1 if self.players[self.president].role == "liberal" else 0
             chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
             policy, state = policy_selection(pres_bias, chan_bias, constants.POLICY_PHI)
+            if pres_bias == 0:
+                self._bias_hitler_distribution(self.president)
+            if chan_bias == 0:
+                self._bias_hitler_distribution(chancellor)
             probs = state.probabilities()
             print(
                 f"Policy probabilities -> Liberal: {probs[0]:.2f}, Fascist: {probs[1]:.2f}"
@@ -217,6 +234,7 @@ class QuantumSecretHitlerGame:
         print(
             f"Policies -> Liberal: {self.liberal_policies}, Fascist: {self.fascist_policies}"
         )
+        self._print_hitler_distribution()
 
     def _bullet_phase(self, interactive: bool = False) -> None:
         if self.fascist_policies not in (4, 5):
@@ -248,6 +266,7 @@ class QuantumSecretHitlerGame:
         if shot == self.hitler:
             # Immediate liberal victory
             self.liberal_policies = constants.LIBERAL_WIN_POLICIES
+        self._print_hitler_distribution()
 
     def _check_winner(self, chancellor: Optional[int]) -> Optional[str]:
         if (
@@ -268,6 +287,7 @@ class QuantumSecretHitlerGame:
     def play_round(self, interactive: bool = False) -> Optional[str]:
         self.round += 1
         print(f"\n--- Round {self.round} ---")
+        self._print_hitler_distribution()
         print(f"President is {self.president}")
         chancellor = self._elect_chancellor(interactive)
         self._enact_policy(chancellor, interactive)

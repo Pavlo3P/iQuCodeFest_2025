@@ -64,3 +64,12 @@ MAX_ETA = 1.0
 # Number of liberal and fascist policies required for each side to win.
 LIBERAL_WIN_POLICIES = 5
 FASCIST_WIN_POLICIES = 6
+
+# ---------------------------------------------------------------------------
+# Hitler distribution update
+# ---------------------------------------------------------------------------
+
+# Factor used to bias the Hitler probability toward a player when they take a
+# fascist-leaning action.  A value greater than ``1`` increases the chance that
+# the player is Hitler while keeping a non-zero probability for others.
+HITLER_BIAS_FACTOR = 1.2
