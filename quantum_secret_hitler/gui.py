@@ -16,8 +16,8 @@ from typing import Dict, Optional
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
-from .simulate import QuantumSecretHitlerGame
-from . import constants
+from simulate import QuantumSecretHitlerGame
+import constants
 
 
 PLAYER_RADIUS = 20
