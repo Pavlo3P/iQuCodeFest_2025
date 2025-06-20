@@ -11,6 +11,9 @@ from __future__ import annotations
 import numpy as np
 from typing import List, Optional
 import sys
+from argparse import ArgumentParser
+
+import matplotlib.pyplot as plt
 
 from . import constants
 from .game import (
@@ -60,6 +63,10 @@ class QuantumSecretHitlerGame:
         self.failed_elections = 0
         self.round = 0
 
+        # Matplotlib figure for optional visualization
+        self._fig = None
+        self._ax = None
+
     # ------------------------------------------------------------------
     # Role assignment helpers
     # ------------------------------------------------------------------
@@ -94,6 +101,18 @@ class QuantumSecretHitlerGame:
     # ------------------------------------------------------------------
     def _alive_players(self) -> List[Player]:
         return [p for p in self.players if p.alive]
+
+    def _visualize(self) -> None:
+        """Show a bar chart of the policy counts."""
+        if self._fig is None:
+            plt.ion()
+            self._fig, self._ax = plt.subplots()
+            self._ax.set_ylim(0, max(constants.LIBERAL_WIN_POLICIES, constants.FASCIST_WIN_POLICIES))
+        self._ax.clear()
+        self._ax.bar(['Liberal', 'Fascist'], [self.liberal_policies, self.fascist_policies], color=['blue', 'red'])
+        self._ax.set_title(f"Round {self.round}")
+        self._fig.canvas.draw()
+        self._fig.canvas.flush_events()
 
     def _next_president(self) -> None:
         idx = self.president
@@ -210,14 +229,28 @@ class QuantumSecretHitlerGame:
         self._next_president()
         return winner
 
-    def play_game(self) -> str:
+    def play_game(self, interactive: bool = False) -> str:
+        if interactive:
+            print("Interactive mode. Close the plot window to exit.")
         while True:
             result = self.play_round()
+            if interactive:
+                self._visualize()
+                ans = input("Press Enter for next round or 'q' to quit: ")
+                if ans.lower().startswith("q"):
+                    print("Game aborted.")
+                    break
             if result:
+                if interactive:
+                    self._visualize()
                 print(f"\n{result} win the game!")
                 return result
+        return "Aborted"
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser(description="Quantum Secret Hitler simulation")
+    parser.add_argument("--auto", action="store_true", help="Run without prompts")
+    args = parser.parse_args()
     game = QuantumSecretHitlerGame()
-    game.play_game()
+    game.play_game(interactive=not args.auto)
