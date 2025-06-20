@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import numpy as np
 from typing import List, Optional
-import sys
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
@@ -66,6 +65,8 @@ class QuantumSecretHitlerGame:
         # Matplotlib figure for optional visualization
         self._fig = None
         self._ax = None
+        self._prob_fig = None
+        self._prob_ax = None
 
     # ------------------------------------------------------------------
     # Role assignment helpers
@@ -114,6 +115,18 @@ class QuantumSecretHitlerGame:
         self._fig.canvas.draw()
         self._fig.canvas.flush_events()
 
+    def _plot_distribution(self, labels: List[str], probs: List[float], title: str) -> None:
+        """Display a probability distribution as a bar chart."""
+        if self._prob_fig is None:
+            plt.ion()
+            self._prob_fig, self._prob_ax = plt.subplots()
+        self._prob_ax.clear()
+        self._prob_ax.bar(labels, probs, color='green')
+        self._prob_ax.set_ylim(0, 1)
+        self._prob_ax.set_title(title)
+        self._prob_fig.canvas.draw()
+        self._prob_fig.canvas.flush_events()
+
     def _next_president(self) -> None:
         idx = self.president
         while True:
@@ -125,20 +138,41 @@ class QuantumSecretHitlerGame:
     # ------------------------------------------------------------------
     # Game mechanics
     # ------------------------------------------------------------------
-    def _elect_chancellor(self) -> Optional[int]:
+    def _elect_chancellor(self, interactive: bool = False) -> Optional[int]:
         alive = self._alive_players()
         choices = [p.index for p in alive if p.index != self.president]
-        candidate = int(np.random.choice(choices))
+        if interactive:
+            try:
+                raw = input(f"Choose chancellor from {choices} (enter for random): ")
+                candidate = int(raw) if raw.strip() else int(np.random.choice(choices))
+            except ValueError:
+                candidate = int(np.random.choice(choices))
+        else:
+            candidate = int(np.random.choice(choices))
 
         print(f"President {self.president} nominates player {candidate} as chancellor")
 
-        votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+        if interactive:
+            raw = input(f"Enter {len(alive)} votes as 0/1 separated by spaces (enter for auto): ")
+            if raw.strip():
+                bits = [int(b) for b in raw.split() if b in '01']
+                if len(bits) == len(alive):
+                    votes = bits
+                else:
+                    votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+            else:
+                votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+        else:
+            votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+
         print(f"Votes: {votes}")
         success, state = quantum_vote(votes, constants.VOTE_PHI)
         probs = state.probabilities()
         print(
             f"Vote probabilities -> Fail: {probs[0]:.2f}, Success: {probs[1]:.2f}"
         )
+        if interactive:
+            self._plot_distribution(["Fail", "Success"], list(probs), "Vote outcome")
         if success:
             print("Election successful")
         else:
@@ -149,7 +183,7 @@ class QuantumSecretHitlerGame:
         self.failed_elections += 1
         return None
 
-    def _enact_policy(self, chancellor: Optional[int]) -> None:
+    def _enact_policy(self, chancellor: Optional[int], interactive: bool = False) -> None:
         if chancellor is None:
             if self.failed_elections >= 3:
                 policy, state = policy_selection(0, 0, constants.POLICY_PHI)
@@ -157,6 +191,8 @@ class QuantumSecretHitlerGame:
                 print(
                     f"Policy probabilities -> Liberal: {probs[0]:.2f}, Fascist: {probs[1]:.2f}"
                 )
+                if interactive:
+                    self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
                 self.failed_elections = 0
                 print("Top-deck policy due to anarchy")
             else:
@@ -170,6 +206,8 @@ class QuantumSecretHitlerGame:
             print(
                 f"Policy probabilities -> Liberal: {probs[0]:.2f}, Fascist: {probs[1]:.2f}"
             )
+            if interactive:
+                self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
             print(f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy")
 
         if policy == 0:
@@ -180,18 +218,27 @@ class QuantumSecretHitlerGame:
             f"Policies -> Liberal: {self.liberal_policies}, Fascist: {self.fascist_policies}"
         )
 
-    def _bullet_phase(self) -> None:
+    def _bullet_phase(self, interactive: bool = False) -> None:
         if self.fascist_policies not in (4, 5):
             return
         alive = self._alive_players()
         choices = [p.index for p in alive if p.index != self.president]
-        target = int(np.random.choice(choices))
+        if interactive:
+            try:
+                raw = input(f"Choose bullet target from {choices} (enter for random): ")
+                target = int(raw) if raw.strip() else int(np.random.choice(choices))
+            except ValueError:
+                target = int(np.random.choice(choices))
+        else:
+            target = int(np.random.choice(choices))
         print(f"President {self.president} chooses policy kill targeting player {target}")
         target_local = [p.index for p in alive].index(target)
         bullet_state = biased_bullet_state(len(alive), target_local)
         probs = bullet_state.probabilities()
         dist = {alive[i].index: round(prob, 2) for i, prob in enumerate(probs)}
         print(f"Bullet probabilities: {dist}")
+        if interactive:
+            self._plot_distribution([str(p.index) for p in alive], list(probs), "Bullet outcome")
         shot_idx_local = int(np.random.choice(len(alive), p=probs))
         shot = alive[shot_idx_local].index
         self.players[shot].alive = False
@@ -218,13 +265,13 @@ class QuantumSecretHitlerGame:
             return "Liberals"
         return None
 
-    def play_round(self) -> Optional[str]:
+    def play_round(self, interactive: bool = False) -> Optional[str]:
         self.round += 1
         print(f"\n--- Round {self.round} ---")
         print(f"President is {self.president}")
-        chancellor = self._elect_chancellor()
-        self._enact_policy(chancellor)
-        self._bullet_phase()
+        chancellor = self._elect_chancellor(interactive)
+        self._enact_policy(chancellor, interactive)
+        self._bullet_phase(interactive)
         winner = self._check_winner(chancellor)
         self._next_president()
         return winner
@@ -233,7 +280,7 @@ class QuantumSecretHitlerGame:
         if interactive:
             print("Interactive mode. Close the plot window to exit.")
         while True:
-            result = self.play_round()
+            result = self.play_round(interactive)
             if interactive:
                 self._visualize()
                 ans = input("Press Enter for next round or 'q' to quit: ")
