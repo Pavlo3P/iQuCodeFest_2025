@@ -213,8 +213,24 @@ class QuantumSecretHitlerGame:
                 print("No chancellor elected")
                 return
         else:
-            pres_bias = 1 if self.players[self.president].role == "liberal" else 0
-            chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
+            if interactive:
+                ans = input(
+                    f"Should president {self.president} favour liberal policy? (y/n, enter for role-based) "
+                ).strip().lower()
+                if ans in {"y", "n"}:
+                    pres_bias = 1 if ans == "y" else 0
+                else:
+                    pres_bias = 1 if self.players[self.president].role == "liberal" else 0
+                ans = input(
+                    f"Should chancellor {chancellor} favour liberal policy? (y/n, enter for role-based) "
+                ).strip().lower()
+                if ans in {"y", "n"}:
+                    chan_bias = 1 if ans == "y" else 0
+                else:
+                    chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
+            else:
+                pres_bias = 1 if self.players[self.president].role == "liberal" else 0
+                chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
             policy, state = policy_selection(pres_bias, chan_bias, constants.POLICY_PHI)
             if pres_bias == 0:
                 self._bias_hitler_distribution(self.president)
@@ -226,11 +242,6 @@ class QuantumSecretHitlerGame:
             )
             if interactive:
                 self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
-                raw = input(
-                    "Choose policy 0=Liberal, 1=Fascist (enter for random result): "
-                ).strip()
-                if raw in {"0", "1"}:
-                    policy = int(raw)
             print(
                 f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy"
             )
