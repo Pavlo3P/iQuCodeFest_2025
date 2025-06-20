@@ -42,12 +42,15 @@ VOTE_DELTA = VOTE_BIAS_C / (PLAYER_COUNT - 1)
 VOTE_PHI = np.arcsin(2 * VOTE_DELTA)
 
 # ``POLICY_PHI`` controls the bias when the president and chancellor draw a
-# policy.  For simplicity we use the same angle as the voting procedure.
-POLICY_PHI = VOTE_PHI
+# policy.  It is chosen so that if both players favour a liberal action the
+# probability of drawing a liberal policy is ``LIBERAL_POLICY_PROBABILITY``.
 
 # Probability of drawing a liberal policy when both president and
 # chancellor favour liberal action
 LIBERAL_POLICY_PROBABILITY = 0.8
+
+_alpha = np.arctan(np.sqrt(FASCIST_POLICIES / LIBERAL_POLICIES))
+POLICY_PHI = np.pi - _alpha - np.arccos(np.sqrt(LIBERAL_POLICY_PROBABILITY))
 
 # Bullet mechanic probabilities
 BULLET_TARGET_PROB = 0.8

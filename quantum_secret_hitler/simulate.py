@@ -77,7 +77,8 @@ class QuantumSecretHitlerGame:
             constants.PLAYER_COUNT, constants.LIBERAL_PLAYERS
         )
         probs = state.probabilities()
-        uniform_prob = 1 / len(probs)
+        from math import comb
+        uniform_prob = 1 / comb(constants.PLAYER_COUNT, constants.LIBERAL_PLAYERS)
         print(f"Role assignment probability for each valid state: {uniform_prob:.4f}")
         outcome = np.random.choice(2 ** self.num_players, p=probs)
         bits = list(map(int, bin(outcome)[2:].zfill(self.num_players)))
