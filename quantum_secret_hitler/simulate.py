@@ -225,7 +225,14 @@ class QuantumSecretHitlerGame:
             )
             if interactive:
                 self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
-            print(f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy")
+                raw = input(
+                    "Choose policy 0=Liberal, 1=Fascist (enter for random result): "
+                ).strip()
+                if raw in {"0", "1"}:
+                    policy = int(raw)
+            print(
+                f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy"
+            )
 
         if policy == 0:
             self.liberal_policies += 1
