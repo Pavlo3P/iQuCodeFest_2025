@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 from typing import List, Optional
+import sys
 
 from . import constants
 from .game import (
@@ -39,9 +40,15 @@ class QuantumSecretHitlerGame:
         self.hitler = self._assign_hitler()
         self.president = np.random.randint(self.num_players)
 
+        print("Initial roles:")
+        for p in self.players:
+            print(f"  Player {p.index}: {p.role}")
+        print(f"Hitler is player {self.hitler}\n")
+
         self.liberal_policies = 0
         self.fascist_policies = 0
         self.failed_elections = 0
+        self.round = 0
 
     # ------------------------------------------------------------------
     # Role assignment helpers
@@ -63,8 +70,9 @@ class QuantumSecretHitlerGame:
         """Randomly pick the initial Hitler among the fascists."""
         fascists = [p.index for p in self.players if p.role == "fascist"]
         state = uniform_hitler_state(len(fascists))
-        outcome = np.random.choice(len(fascists), p=state.probabilities())
-        return fascists[outcome]
+        outcome = np.random.choice(2 ** len(fascists), p=state.probabilities())
+        bit_index = int(np.log2(outcome))
+        return fascists[bit_index]
 
     # ------------------------------------------------------------------
     # Basic helpers
@@ -88,8 +96,15 @@ class QuantumSecretHitlerGame:
         choices = [p.index for p in alive if p.index != self.president]
         candidate = int(np.random.choice(choices))
 
+        print(f"President {self.president} nominates player {candidate} as chancellor")
+
         votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+        print(f"Votes: {votes}")
         success, _ = quantum_vote(votes, constants.VOTE_PHI)
+        if success:
+            print("Election successful")
+        else:
+            print("Election failed")
         if success:
             self.failed_elections = 0
             return candidate
@@ -101,17 +116,23 @@ class QuantumSecretHitlerGame:
             if self.failed_elections >= 3:
                 policy, _ = policy_selection(0, 0, constants.POLICY_PHI)
                 self.failed_elections = 0
+                print("Top-deck policy due to anarchy")
             else:
+                print("No chancellor elected")
                 return
         else:
             pres_bias = 1 if self.players[self.president].role == "liberal" else 0
             chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
             policy, _ = policy_selection(pres_bias, chan_bias, constants.POLICY_PHI)
+            print(f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy")
 
         if policy == 0:
             self.liberal_policies += 1
         else:
             self.fascist_policies += 1
+        print(
+            f"Policies -> Liberal: {self.liberal_policies}, Fascist: {self.fascist_policies}"
+        )
 
     def _bullet_phase(self) -> None:
         if self.fascist_policies not in (4, 5):
@@ -119,6 +140,7 @@ class QuantumSecretHitlerGame:
         alive = self._alive_players()
         choices = [p.index for p in alive if p.index != self.president]
         target = int(np.random.choice(choices))
+        print(f"President {self.president} chooses policy kill targeting player {target}")
         target_local = [p.index for p in alive].index(target)
         bullet_state = biased_bullet_state(len(alive), target_local)
         shot_idx_local = int(
@@ -126,6 +148,9 @@ class QuantumSecretHitlerGame:
         )
         shot = alive[shot_idx_local].index
         self.players[shot].alive = False
+        print(f"Player {shot} was shot")
+        if shot == self.hitler:
+            print("Hitler was eliminated!")
         if shot == self.hitler:
             # Immediate liberal victory
             self.liberal_policies = constants.LIBERAL_WIN_POLICIES
@@ -136,14 +161,20 @@ class QuantumSecretHitlerGame:
             and chancellor == self.hitler
             and self.fascist_policies >= 3
         ):
+            print("Hitler elected as chancellor - Fascists win!")
             return "Fascists"
         if self.fascist_policies >= constants.FASCIST_WIN_POLICIES:
+            print("Fascists have enough policies to win")
             return "Fascists"
         if self.liberal_policies >= constants.LIBERAL_WIN_POLICIES:
+            print("Liberals enacted enough policies to win")
             return "Liberals"
         return None
 
     def play_round(self) -> Optional[str]:
+        self.round += 1
+        print(f"\n--- Round {self.round} ---")
+        print(f"President is {self.president}")
         chancellor = self._elect_chancellor()
         self._enact_policy(chancellor)
         self._bullet_phase()
@@ -155,10 +186,10 @@ class QuantumSecretHitlerGame:
         while True:
             result = self.play_round()
             if result:
+                print(f"\n{result} win the game!")
                 return result
 
 
 if __name__ == "__main__":
     game = QuantumSecretHitlerGame()
-    winner = game.play_game()
-    print(f"{winner} win the game!")
+    game.play_game()
