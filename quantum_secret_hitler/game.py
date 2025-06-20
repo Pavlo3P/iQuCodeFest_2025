@@ -12,10 +12,11 @@ import itertools
 from typing import List, Tuple
 
 import numpy as np
-from qiskit import Aer, QuantumCircuit, execute
+from qiskit import QuantumCircuit
+from qiskit_aer import Aer
 from qiskit.quantum_info import Statevector, Kraus
 
-from . import constants
+import constants
 
 
 def uniform_role_state(num_players: int, num_liberals: int) -> Statevector:
@@ -55,8 +56,8 @@ def quantum_vote(votes: List[int], phi: float) -> Tuple[int, Statevector]:
 
     qc.save_statevector()
     backend = Aer.get_backend("aer_simulator")
-    result = execute(qc, backend).result()
-    state = Statevector(result.data(0)["statevector"])
+    result = backend.run(qc).result()
+    state = Statevector(result.get_statevector())
     outcome = np.random.choice([0, 1], p=state.probabilities())
     return int(outcome), state
 
@@ -77,8 +78,8 @@ def policy_selection(pres_bias: int, chan_bias: int, phi: float) -> Tuple[int, S
 
     qc.save_statevector()
     backend = Aer.get_backend("aer_simulator")
-    result = execute(qc, backend).result()
-    state = Statevector(result.data(0)["statevector"])
+    result = backend.run(qc).result()
+    state = Statevector(result.get_statevector())
     outcome = np.random.choice([0, 1], p=state.probabilities())
     return int(outcome), state
 
