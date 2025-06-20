@@ -123,9 +123,12 @@ class QuantumSecretHitlerGame:
             plt.ion()
             self._fig, self._ax = plt.subplots()
             self._ax.set_ylim(0, max(constants.LIBERAL_WIN_POLICIES, constants.FASCIST_WIN_POLICIES))
+            self._fig.tight_layout(pad=2.0)
         self._ax.clear()
         self._ax.bar(['Liberal', 'Fascist'], [self.liberal_policies, self.fascist_policies], color=['blue', 'red'])
-        self._ax.set_title(f"Round {self.round}")
+        self._ax.set_title(f"Round {self.round}", fontsize=8)
+        self._ax.tick_params(labelsize=8)
+        self._fig.tight_layout(pad=2.0)
         self._fig.canvas.draw()
         self._fig.canvas.flush_events()
 
@@ -134,10 +137,13 @@ class QuantumSecretHitlerGame:
         if self._prob_fig is None:
             plt.ion()
             self._prob_fig, self._prob_ax = plt.subplots()
+            self._prob_fig.tight_layout(pad=2.0)
         self._prob_ax.clear()
         self._prob_ax.bar(labels, probs, color='green')
         self._prob_ax.set_ylim(0, 1)
-        self._prob_ax.set_title(title)
+        self._prob_ax.set_title(title, fontsize=8)
+        self._prob_ax.tick_params(labelsize=8)
+        self._prob_fig.tight_layout(pad=2.0)
         self._prob_fig.canvas.draw()
         self._prob_fig.canvas.flush_events()
 

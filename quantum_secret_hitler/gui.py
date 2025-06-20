@@ -67,8 +67,10 @@ class SecretHitlerGUI(tk.Tk):
         self.resolve_btn = tk.Button(sidebar, text="Resolve", command=self.resolve_step, state=tk.DISABLED)
         self.resolve_btn.pack(pady=4)
 
+        # probability plots
         self.fig, self.axes = plt.subplots(2, 2, figsize=(5, 4))
-        self.fig.tight_layout()
+        self.fig.subplots_adjust(hspace=0.5, wspace=0.4)
+        self.fig.tight_layout(pad=2.0)
         self.fig_canvas = FigureCanvasTkAgg(self.fig, master=sidebar)
         self.fig_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
@@ -232,24 +234,29 @@ class SecretHitlerGUI(tk.Tk):
         probs = [self.game.hitler_dist[k] for k in self.game.hitler_dist]
         ax_hitler.bar(labels, probs, color="orange")
         ax_hitler.set_ylim(0, 1)
-        ax_hitler.set_title("Hitler dist")
+        ax_hitler.set_title("Hitler dist", fontsize=8)
+        ax_hitler.tick_params(labelsize=8)
 
         ax_vote.clear()
         if self.vote_probs is not None:
             ax_vote.bar(["Fail", "Success"], self.vote_probs, color="purple")
             ax_vote.set_ylim(0, 1)
-        ax_vote.set_title("Vote prob")
+        ax_vote.set_title("Vote prob", fontsize=8)
+        ax_vote.tick_params(labelsize=8)
 
         ax_fail.clear()
         ax_fail.bar(["Fails"], [self.game.failed_elections], color="gray")
         ax_fail.set_ylim(0, 3)
-        ax_fail.set_title("Failed elections")
+        ax_fail.set_title("Failed elections", fontsize=8)
+        ax_fail.tick_params(labelsize=8)
 
         ax_policies.clear()
         ax_policies.bar(["Lib", "Fas"], [self.game.liberal_policies, self.game.fascist_policies], color=["blue", "red"])
         ax_policies.set_ylim(0, max(constants.LIBERAL_WIN_POLICIES, constants.FASCIST_WIN_POLICIES))
-        ax_policies.set_title("Policies")
+        ax_policies.set_title("Policies", fontsize=8)
+        ax_policies.tick_params(labelsize=8)
 
+        self.fig.tight_layout(pad=2.0)
         self.fig_canvas.draw()
 
 
