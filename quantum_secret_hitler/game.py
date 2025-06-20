@@ -16,7 +16,7 @@ from qiskit import QuantumCircuit
 from qiskit_aer import Aer
 from qiskit.quantum_info import Statevector, Kraus
 
-from . import constants
+import constants
 
 
 def uniform_role_state(num_players: int, num_liberals: int) -> Statevector:

@@ -14,8 +14,8 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 
-from . import constants
-from .game import (
+import constants
+from game import (
     uniform_role_state,
     uniform_hitler_state,
     quantum_vote,
@@ -186,7 +186,8 @@ class QuantumSecretHitlerGame:
             f"Vote probabilities -> Fail: {probs[0]:.2f}, Success: {probs[1]:.2f}"
         )
         if interactive:
-            self._plot_distribution(["Fail", "Success"], list(probs), "Vote outcome")
+            # self._plot_distribution(["Fail", "Success"], list(probs), "Vote outcome")
+            ...
         if success:
             print("Election successful")
         else:
@@ -206,7 +207,8 @@ class QuantumSecretHitlerGame:
                     f"Policy probabilities -> Liberal: {probs[0]:.2f}, Fascist: {probs[1]:.2f}"
                 )
                 if interactive:
-                    self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
+                    # self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
+                    ...
                 self.failed_elections = 0
                 print("Top-deck policy due to anarchy")
             else:
@@ -241,7 +243,8 @@ class QuantumSecretHitlerGame:
                 f"Policy probabilities -> Liberal: {probs[0]:.2f}, Fascist: {probs[1]:.2f}"
             )
             if interactive:
-                self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
+                # self._plot_distribution(["Liberal", "Fascist"], list(probs), "Policy draw")
+                ...
             print(
                 f"Chancellor {chancellor} enacts {'Liberal' if policy == 0 else 'Fascist'} policy"
             )
@@ -275,7 +278,8 @@ class QuantumSecretHitlerGame:
         dist = {alive[i].index: round(prob, 2) for i, prob in enumerate(probs)}
         print(f"Bullet probabilities: {dist}")
         if interactive:
-            self._plot_distribution([str(p.index) for p in alive], list(probs), "Bullet outcome")
+            # self._plot_distribution([str(p.index) for p in alive], list(probs), "Bullet outcome")
+            ...
         shot_idx_local = int(np.random.choice(len(alive), p=probs))
         shot = alive[shot_idx_local].index
         self.players[shot].alive = False
@@ -321,14 +325,15 @@ class QuantumSecretHitlerGame:
         while True:
             result = self.play_round(interactive)
             if interactive:
-                self._visualize()
+                # self._visualize()
                 ans = input("Press Enter for next round or 'q' to quit: ")
                 if ans.lower().startswith("q"):
                     print("Game aborted.")
                     break
             if result:
                 if interactive:
-                    self._visualize()
+                    # self._visualize()
+                    ...
                 print(f"\n{result} win the game!")
                 return result
         return "Aborted"
