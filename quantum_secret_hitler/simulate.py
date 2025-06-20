@@ -152,32 +152,54 @@ class QuantumSecretHitlerGame:
     # ------------------------------------------------------------------
     # Game mechanics
     # ------------------------------------------------------------------
-    def _elect_chancellor(self, interactive: bool = False) -> Optional[int]:
+    def _elect_chancellor(
+        self,
+        interactive: bool = False,
+        candidate: Optional[int] = None,
+        votes: Optional[List[int]] = None,
+    ) -> tuple[Optional[int], List[float]]:
         alive = self._alive_players()
         choices = [p.index for p in alive if p.index != self.president]
-        if interactive:
-            try:
-                raw = input(f"Choose chancellor from {choices} (enter for random): ")
-                candidate = int(raw) if raw.strip() else int(np.random.choice(choices))
-            except ValueError:
+        if candidate is None:
+            if interactive:
+                try:
+                    raw = input(
+                        f"Choose chancellor from {choices} (enter for random): "
+                    )
+                    candidate = (
+                        int(raw) if raw.strip() else int(np.random.choice(choices))
+                    )
+                except ValueError:
+                    candidate = int(np.random.choice(choices))
+            else:
                 candidate = int(np.random.choice(choices))
-        else:
-            candidate = int(np.random.choice(choices))
 
         print(f"President {self.president} nominates player {candidate} as chancellor")
 
-        if interactive:
-            raw = input(f"Enter {len(alive)} votes as 0/1 separated by spaces (enter for auto): ")
-            if raw.strip():
-                bits = [int(b) for b in raw.split() if b in '01']
-                if len(bits) == len(alive):
-                    votes = bits
+        if votes is None:
+            if interactive:
+                raw = input(
+                    f"Enter {len(alive)} votes as 0/1 separated by spaces (enter for auto): "
+                )
+                if raw.strip():
+                    bits = [int(b) for b in raw.split() if b in '01']
+                    if len(bits) == len(alive):
+                        votes = bits
+                    else:
+                        votes = [
+                            1 if p.role == self.players[candidate].role else 0
+                            for p in alive
+                        ]
                 else:
-                    votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+                    votes = [
+                        1 if p.role == self.players[candidate].role else 0
+                        for p in alive
+                    ]
             else:
-                votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
-        else:
-            votes = [1 if p.role == self.players[candidate].role else 0 for p in alive]
+                votes = [
+                    1 if p.role == self.players[candidate].role else 0
+                    for p in alive
+                ]
 
         print(f"Votes: {votes}")
         success, state = quantum_vote(votes, constants.VOTE_PHI)
@@ -193,11 +215,17 @@ class QuantumSecretHitlerGame:
             print("Election failed")
         if success:
             self.failed_elections = 0
-            return candidate
+            return candidate, list(probs)
         self.failed_elections += 1
-        return None
+        return None, list(probs)
 
-    def _enact_policy(self, chancellor: Optional[int], interactive: bool = False) -> None:
+    def _enact_policy(
+        self,
+        chancellor: Optional[int],
+        interactive: bool = False,
+        pres_bias: Optional[int] = None,
+        chan_bias: Optional[int] = None,
+    ) -> tuple[int, Optional[List[float]]]:
         if chancellor is None:
             if self.failed_elections >= 3:
                 policy, state = policy_selection(0, 0, constants.POLICY_PHI)
@@ -211,26 +239,27 @@ class QuantumSecretHitlerGame:
                 print("Top-deck policy due to anarchy")
             else:
                 print("No chancellor elected")
-                return
+                return -1, None
         else:
-            if interactive:
-                ans = input(
-                    f"Should president {self.president} favour liberal policy? (y/n, enter for role-based) "
-                ).strip().lower()
-                if ans in {"y", "n"}:
-                    pres_bias = 1 if ans == "y" else 0
+            if pres_bias is None or chan_bias is None:
+                if interactive:
+                    ans = input(
+                        f"Should president {self.president} favour liberal policy? (y/n, enter for role-based) "
+                    ).strip().lower()
+                    if ans in {"y", "n"}:
+                        pres_bias = 1 if ans == "y" else 0
+                    else:
+                        pres_bias = 1 if self.players[self.president].role == "liberal" else 0
+                    ans = input(
+                        f"Should chancellor {chancellor} favour liberal policy? (y/n, enter for role-based) "
+                    ).strip().lower()
+                    if ans in {"y", "n"}:
+                        chan_bias = 1 if ans == "y" else 0
+                    else:
+                        chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
                 else:
                     pres_bias = 1 if self.players[self.president].role == "liberal" else 0
-                ans = input(
-                    f"Should chancellor {chancellor} favour liberal policy? (y/n, enter for role-based) "
-                ).strip().lower()
-                if ans in {"y", "n"}:
-                    chan_bias = 1 if ans == "y" else 0
-                else:
                     chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
-            else:
-                pres_bias = 1 if self.players[self.president].role == "liberal" else 0
-                chan_bias = 1 if self.players[chancellor].role == "liberal" else 0
             policy, state = policy_selection(pres_bias, chan_bias, constants.POLICY_PHI)
             if pres_bias == 0:
                 self._bias_hitler_distribution(self.president)
@@ -254,20 +283,28 @@ class QuantumSecretHitlerGame:
             f"Policies -> Liberal: {self.liberal_policies}, Fascist: {self.fascist_policies}"
         )
         self._print_hitler_distribution()
+        return policy, list(probs)
 
-    def _bullet_phase(self, interactive: bool = False) -> None:
+    def _bullet_phase(
+        self,
+        interactive: bool = False,
+        target: Optional[int] = None,
+    ) -> tuple[Optional[int], Optional[List[float]]]:
         if self.fascist_policies not in (4, 5):
-            return
+            return None, None
         alive = self._alive_players()
         choices = [p.index for p in alive if p.index != self.president]
-        if interactive:
-            try:
-                raw = input(f"Choose bullet target from {choices} (enter for random): ")
-                target = int(raw) if raw.strip() else int(np.random.choice(choices))
-            except ValueError:
+        if target is None:
+            if interactive:
+                try:
+                    raw = input(
+                        f"Choose bullet target from {choices} (enter for random): "
+                    )
+                    target = int(raw) if raw.strip() else int(np.random.choice(choices))
+                except ValueError:
+                    target = int(np.random.choice(choices))
+            else:
                 target = int(np.random.choice(choices))
-        else:
-            target = int(np.random.choice(choices))
         print(f"President {self.president} chooses policy kill targeting player {target}")
         target_local = [p.index for p in alive].index(target)
         bullet_state = biased_bullet_state(len(alive), target_local)
@@ -286,6 +323,7 @@ class QuantumSecretHitlerGame:
             # Immediate liberal victory
             self.liberal_policies = constants.LIBERAL_WIN_POLICIES
         self._print_hitler_distribution()
+        return shot, list(probs)
 
     def _check_winner(self, chancellor: Optional[int]) -> Optional[str]:
         if (
@@ -308,7 +346,7 @@ class QuantumSecretHitlerGame:
         print(f"\n--- Round {self.round} ---")
         self._print_hitler_distribution()
         print(f"President is {self.president}")
-        chancellor = self._elect_chancellor(interactive)
+        chancellor, _ = self._elect_chancellor(interactive)
         self._enact_policy(chancellor, interactive)
         self._bullet_phase(interactive)
         winner = self._check_winner(chancellor)
